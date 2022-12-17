@@ -29,32 +29,37 @@ for (int i = 2; routes.Count < valves.Length * (valves.Length - 1); i++)
 
 var destValves = valves.Where(v => v.Flow > 0).ToDictionary(v => v.Valve, v => v.Flow);
 
-var paths = GetPaths(new[] { "AA" }, 0, 0);
+var paths = GetPaths(new[] { "AA" }, destValves.Keys.ToArray(), 0, 0);
 
-var maxFlow = paths.Max(p => p.totalFlow);
-
-Console.WriteLine(maxFlow);
-
-Console.WriteLine($"{string.Join('>', paths.First(p => p.totalFlow == maxFlow).path)}");
-
-
-(string[] path, long totalFlow)[] GetPaths(string[] path, int time, long totalFlow)
+var paths2 = paths.Select(p => 
 {
-    var nextDests = destValves.Keys.Except(path).ToArray();
+    var p2s = GetPaths(new[] { "AA" }, destValves.Keys.Except(p.path).ToArray(), 0, 0);
+    var max = p2s.OrderByDescending(p => p.totalFlow).First();
+    return new { path1 = p.path, flow1 = p.totalFlow, path2 = max.path, flow2 = max.totalFlow, totalFlow = p.totalFlow + max.totalFlow };
+});
+
+var best = paths2.OrderByDescending(p => p.totalFlow).First();
+
+Console.WriteLine($"{best.totalFlow} = {string.Join('>', best.path1)}={best.flow1} + {string.Join('>', best.path2)}={best.flow2}");
+
+
+(string[] path, long totalFlow)[] GetPaths(string[] path, string[] dests, int time, long totalFlow)
+{
+    var nextDests = dests.Except(path).ToArray();
     var current = path.Last();
     var bestNext = nextDests.Select(n =>
     {
         var routeLen = routes[(current, n)].Length;
         var valveFlow = destValves[n];
-        var value = valveFlow * (30 - Math.Min(time + routeLen, 30));
+        var value = valveFlow * (26 - Math.Min(time + routeLen, 26));
         return (n, routeLen, value);
     }).Where(b => b.value > 0).OrderByDescending(b => b.value).Take(10).ToArray();
 
     if (bestNext.Length == 0)
     {
-        Console.WriteLine($"{string.Join('>', path)}={totalFlow}");
+        //Console.WriteLine($"{string.Join('>', path)}={totalFlow}");
         return new[] { (path, totalFlow) };
     }
 
-    return bestNext.SelectMany(d => GetPaths(path.Append(d.n).ToArray(), time + d.routeLen, totalFlow + d.value)).ToArray();
+    return bestNext.SelectMany(d => GetPaths(path.Append(d.n).ToArray(), dests, time + d.routeLen, totalFlow + d.value)).ToArray();
 }

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Text.RegularExpressions;
 
-var valves = File.ReadLines("input.txt").Select(line =>
+var valves = File.ReadLines("sample.txt").Select(line =>
 {
     var match = Regex.Match(line, @"^Valve (?<valve>\w\w) has flow rate=(?<rate>\d+); tunnels? leads? to valves? (?<paths>.*)$");
     var Valve = match.Groups["valve"].Value;
@@ -29,32 +29,40 @@ for (int i = 2; routes.Count < valves.Length * (valves.Length - 1); i++)
 
 var destValves = valves.Where(v => v.Flow > 0).ToDictionary(v => v.Valve, v => v.Flow);
 
-var paths = GetPaths(new[] { "AA" }, 0, 0);
+var paths = GetPaths(new[] { "AA" });
 
-var maxFlow = paths.Max(p => p.totalFlow);
+int maxFlow = paths.Max(p => CalcFlow(p));
 
 Console.WriteLine(maxFlow);
 
-Console.WriteLine($"{string.Join('>', paths.First(p => p.totalFlow == maxFlow).path)}");
 
-
-(string[] path, long totalFlow)[] GetPaths(string[] path, int time, long totalFlow)
+string[][] GetPaths(string[] path)
 {
     var nextDests = destValves.Keys.Except(path).ToArray();
-    var current = path.Last();
-    var bestNext = nextDests.Select(n =>
+    if (nextDests.Length == 0)
     {
-        var routeLen = routes[(current, n)].Length;
-        var valveFlow = destValves[n];
-        var value = valveFlow * (30 - Math.Min(time + routeLen, 30));
-        return (n, routeLen, value);
-    }).Where(b => b.value > 0).OrderByDescending(b => b.value).Take(10).ToArray();
-
-    if (bestNext.Length == 0)
-    {
-        Console.WriteLine($"{string.Join('>', path)}={totalFlow}");
-        return new[] { (path, totalFlow) };
+        Console.WriteLine(string.Join('>', path));
+        return new[] { path };
     }
 
-    return bestNext.SelectMany(d => GetPaths(path.Append(d.n).ToArray(), time + d.routeLen, totalFlow + d.value)).ToArray();
+    return nextDests.SelectMany(d => GetPaths(path.Append(d).ToArray())).ToArray();
+}
+
+int CalcFlow(string[] path)
+{
+    var time = 0;
+    var totalFlow = 0;
+
+    Console.Write(string.Join('>', path));
+
+    for (int i = 0; i < path.Length - 1; i++)
+    {
+        var routeLen = routes[(path[i], path[i + 1])].Length;
+        var valveFlow = destValves[path[i + 1]];
+        time += routeLen;
+        totalFlow += valveFlow * (30 - time);
+    }
+
+    Console.WriteLine($"={totalFlow}");
+    return totalFlow;
 }
