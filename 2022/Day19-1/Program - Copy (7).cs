@@ -5,10 +5,10 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using static System.Net.Mime.MediaTypeNames;
 
-var blueprints = File.ReadLines("input.txt").Select(line =>
+var blueprints = File.ReadLines("sample.txt").Select(line =>
 {
     var match = Regex.Match(line, @"Blueprint (?<ID>\d+): Each ore robot costs (?<OrePerOre>\d+) ore. Each clay robot costs (?<OrePerClay>\d+) ore. Each obsidian robot costs (?<OrePerObsidian>\d+) ore and (?<ClayPerObsidian>\d+) clay. Each geode robot costs (?<OrePerGeode>\d+) ore and (?<ObsidianPerGeode>\d+) obsidian.");
-    var ID = int.Parse(match.Groups["ID"].Value);
+    var ID = match.Groups["ID"].Value;
     var OrePerOre = int.Parse(match.Groups["OrePerOre"].Value);
     var OrePerClay = int.Parse(match.Groups["OrePerClay"].Value);
     var OrePerObsidian = int.Parse(match.Groups["OrePerObsidian"].Value);
@@ -18,68 +18,62 @@ var blueprints = File.ReadLines("input.txt").Select(line =>
     return (ID, OrePerOre, OrePerClay, OrePerObsidian, ClayPerObsidian, OrePerGeode, ObsidianPerGeode);
 }).ToArray();
 
-var results = new Dictionary<int, int>();
-
 foreach (var blueprint in blueprints)
 {
-    var geodes = CaclulateGeodes(blueprint);
-    results[blueprint.ID] = geodes;
+    var bestBuild = CaclulateGeodes(blueprint);
+    Console.WriteLine(bestBuild);
 }
 
-var final = results.Sum(r => r.Key * r.Value);
-Console.WriteLine(final);
-
-int CaclulateGeodes((int ID, int OrePerOre, int OrePerClay, int OrePerObsidian, int ClayPerObsidian, int OrePerGeode, int ObsidianPerGeode) blueprint)
+(string, int) CaclulateGeodes((string ID, int OrePerOre, int OrePerClay, int OrePerObsidian, int ClayPerObsidian, int OrePerGeode, int ObsidianPerGeode) blueprint)
 {
-    var testQueue = new ConcurrentQueue<(int Ore, int Clay, int Obsidian, int Geode)>();
-    var runtests = new ConcurrentBag<(int Ore, int Clay, int Obsidian, int Geode)>();
+    var tested = new Dictionary<(int, int, int, int), (string, int)>();
+    var testQueue = new Queue<(int Ore, int Clay, int Obsidian, int Geode)>();
     testQueue.Enqueue((0, 1, 1, 1));
-
-    int maxGeodes = 0;
-    string maxBuild = string.Empty;
+    int maxTest = 0, maxTestLen = 0;
 
     while (testQueue.TryDequeue(out var test))
     {
-        if (runtests.Contains(test))
+        if (tested.ContainsKey(test))
             continue;
-        runtests.Add(test);
-        var builds = GetBuilds("G", test.Ore, test.Clay, test.Obsidian, test.Geode - 1);
 
-        var results = builds.AsParallel().Select(build =>
+        var builds = GetBuilds("G", test.Ore, test.Clay, test.Obsidian, test.Geode - 1);
+        var results = new Dictionary<string, (int Ore, int Clay, int Obsidian, int Geode, int Unbuilt)>();
+        foreach (var build in builds)
         {
             int robotsOre = 1, robotsClay = 0, robotsObsidian = 0, robotsGeode = 0;
             int itemsOre = 0, itemsClay = 0, itemsObsidian = 0, itemsGeode = 0;
-            int buildOrder = 0;
+
+            int order = 0;
             for (int i = 0; i < 24; i++)
             {
-                var nextBuild = buildOrder < build.Length ? build[buildOrder] : '.';
+                var nextBuild = order < build.Length ? build[order] : '.';
 
                 int buildOre = 0, buildClay = 0, buildObsidian = 0, buildGeode = 0;
                 if (nextBuild == 'O' && itemsOre >= blueprint.OrePerOre)
                 {
                     buildOre++;
                     itemsOre -= blueprint.OrePerOre;
-                    buildOrder++;
+                    order++;
                 }
                 else if (nextBuild == 'C' && itemsOre >= blueprint.OrePerClay)
                 {
                     buildClay++;
                     itemsOre -= blueprint.OrePerClay;
-                    buildOrder++;
+                    order++;
                 }
                 else if (nextBuild == 'B' && itemsOre >= blueprint.OrePerObsidian && itemsClay >= blueprint.ClayPerObsidian)
                 {
                     buildObsidian++;
                     itemsOre -= blueprint.OrePerObsidian;
                     itemsClay -= blueprint.ClayPerObsidian;
-                    buildOrder++;
+                    order++;
                 }
                 else if (nextBuild == 'G' && itemsOre >= blueprint.OrePerGeode && itemsObsidian >= blueprint.ObsidianPerGeode)
                 {
                     buildGeode++;
                     itemsOre -= blueprint.OrePerGeode;
                     itemsObsidian -= blueprint.ObsidianPerGeode;
-                    buildOrder++;
+                    order++;
                 }
 
                 itemsOre += robotsOre;
@@ -93,33 +87,36 @@ int CaclulateGeodes((int ID, int OrePerOre, int OrePerClay, int OrePerObsidian, 
                 robotsGeode += buildGeode;
             }
 
-            return (Build: build, Clay: itemsClay, Obsidian: itemsObsidian, Geodes: itemsGeode, Unbuilt: build.Length - buildOrder);
-        });
-
-        var best = results.OrderByDescending(r => r.Geodes).ThenBy(r => r.Unbuilt).FirstOrDefault();
-
-        if (best.Geodes > maxGeodes)
+            results[build] = (itemsOre, itemsClay, itemsObsidian, itemsGeode, build.Length - order);
+        }
+        var max = results.OrderByDescending(r => r.Value.Geode).ThenBy(r => r.Value.Unbuilt).FirstOrDefault();
+        tested[test] = (max.Key, max.Value.Geode);
+        if (max.Value.Geode > maxTest)
         {
-            maxGeodes = best.Geodes;
-            maxBuild = best.Build;
+            maxTest = max.Value.Geode;
+            maxTestLen = max.Key.Length;
         }
 
-        if (best.Build.Length > 14 && (best.Build.Length - maxBuild.Length > 2 || best.Unbuilt > 0))
+        if (max.Key.Length > 6 && (max.Key.Length - maxTestLen > 2 || max.Value.Unbuilt > 0))
             continue;
-        if (best.Build.Length > 15) 
-            if ((best.Build.Length <= best.Build.Length && best.Geodes < maxGeodes) || (best.Build.Length > maxBuild.Length && best.Geodes <= maxGeodes))
+        //if (max.Key.Length > 14 && max.Key.Length > maxTestLen)
+        //    continue;
+        if (max.Key.Length > 13) 
+            if ((max.Key.Length <= maxTestLen && max.Value.Geode < maxTest) || (max.Key.Length > maxTestLen && max.Value.Geode <= maxTest))
                 continue;
-
-        if (best.Obsidian > blueprint.ObsidianPerGeode)
+        //if (max.Value.Geode == 0 && maxTest > 0)
+        //    continue;
+        //if (maxTest == 0 && max.Key.Length > 6)
+        //    continue;
+        if (max.Value.Obsidian > blueprint.ObsidianPerGeode)
             testQueue.Enqueue((test.Ore, test.Clay, test.Obsidian, test.Geode + 1));
-        if (best.Clay > blueprint.ClayPerObsidian)
+        if (max.Value.Clay > blueprint.ClayPerObsidian)
             testQueue.Enqueue((test.Ore, test.Clay, test.Obsidian + 1, test.Geode));
         testQueue.Enqueue((test.Ore, test.Clay + 1, test.Obsidian, test.Geode));
         testQueue.Enqueue((test.Ore + 1, test.Clay, test.Obsidian, test.Geode));
     }
 
-    Console.WriteLine($"{blueprint}={maxBuild}={maxGeodes}");
-    return maxGeodes;
+    return tested.MaxBy(t => t.Value.Item2).Value;
 }
 
 IEnumerable<string> GetBuilds(string build, int numOre, int numClay, int numObsidian, int numGeode)
