@@ -96,23 +96,30 @@ int CaclulateGeodes((int ID, int OrePerOre, int OrePerClay, int OrePerObsidian, 
             return (Build: build, Clay: itemsClay, Obsidian: itemsObsidian, Geodes: itemsGeode, Unbuilt: build.Length - buildOrder);
         });
 
-        var best = results.OrderByDescending(r => r.Geodes).ThenBy(r => r.Unbuilt).FirstOrDefault();
+        var result = results.OrderByDescending(r => r.Geodes).ThenBy(r => r.Unbuilt).FirstOrDefault();
 
-        if (best.Geodes > maxGeodes)
+        if (result.Geodes > maxGeodes)
         {
-            maxGeodes = best.Geodes;
-            maxBuild = best.Build;
+            maxGeodes = result.Geodes;
+            maxBuild = result.Build;
         }
 
-        if (best.Build.Length > 14 && (best.Build.Length - maxBuild.Length > 2 || best.Unbuilt > 0))
-            continue;
-        if (best.Build.Length > 15) 
-            if ((best.Build.Length <= best.Build.Length && best.Geodes < maxGeodes) || (best.Build.Length > maxBuild.Length && best.Geodes <= maxGeodes))
+        if (result.Build.Length > 14)
+        {
+            //// Has more than 1 robot left unbuilt
+            if (result.Unbuilt > 1)
                 continue;
+            // Build is 2 more robots than best result
+            if (result.Build.Length - maxBuild.Length > 2)
+                continue;
+            // Has lower output of geodes
+            if ((double)result.Geodes / maxGeodes < 0.5)
+                continue;
+        }
 
-        if (best.Obsidian > blueprint.ObsidianPerGeode)
+        if (result.Obsidian >= blueprint.ObsidianPerGeode)
             testQueue.Enqueue((test.Ore, test.Clay, test.Obsidian, test.Geode + 1));
-        if (best.Clay > blueprint.ClayPerObsidian)
+        if (result.Clay >= blueprint.ClayPerObsidian)
             testQueue.Enqueue((test.Ore, test.Clay, test.Obsidian + 1, test.Geode));
         testQueue.Enqueue((test.Ore, test.Clay + 1, test.Obsidian, test.Geode));
         testQueue.Enqueue((test.Ore + 1, test.Clay, test.Obsidian, test.Geode));
@@ -139,9 +146,8 @@ IEnumerable<string> GetBuilds(string build, int numOre, int numClay, int numObsi
         foreach (var item in GetBuilds("C" + build, numOre, numClay - 1, numObsidian, numGeode))
             yield return item;
 
-    if (numOre > 0)
-        foreach (var item in GetBuilds("O" + build, numOre - 1, numClay, numObsidian, numGeode))
-            yield return item;
+    if (numOre > 0 && numClay == 0 && numObsidian == 0 && numGeode == 0)
+        yield return new string('O', numOre) + build;
 
     yield break;
 }
