@@ -20,7 +20,7 @@ var blueprints = File.ReadLines("input.txt").Select(line =>
 
 var results = new Dictionary<int, int>();
 
-foreach (var blueprint in blueprints)
+foreach (var blueprint in blueprints[1..2])
 {
     var geodes = CaclulateGeodes(blueprint);
     results[blueprint.ID] = geodes;
