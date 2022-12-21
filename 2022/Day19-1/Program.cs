@@ -18,6 +18,9 @@ var blueprints = File.ReadLines("input.txt").Select(line =>
     return (ID, OrePerOre, OrePerClay, OrePerObsidian, ClayPerObsidian, OrePerGeode, ObsidianPerGeode);
 }).ToArray();
 
+PrintBuild(blueprints[1], "OOCCCCBCCBG");
+return;
+
 var results = new Dictionary<int, int>();
 
 foreach (var blueprint in blueprints[1..2])
@@ -31,8 +34,8 @@ Console.WriteLine(final);
 
 int CaclulateGeodes((int ID, int OrePerOre, int OrePerClay, int OrePerObsidian, int ClayPerObsidian, int OrePerGeode, int ObsidianPerGeode) blueprint)
 {
-    var testQueue = new ConcurrentQueue<(int Ore, int Clay, int Obsidian, int Geode)>();
-    var runtests = new ConcurrentBag<(int Ore, int Clay, int Obsidian, int Geode)>();
+    var testQueue = new Queue<(int Ore, int Clay, int Obsidian, int Geode)>();
+    var runtests = new HashSet<(int Ore, int Clay, int Obsidian, int Geode)>();
     testQueue.Enqueue((0, 1, 1, 1));
 
     int maxGeodes = 0;
@@ -104,12 +107,12 @@ int CaclulateGeodes((int ID, int OrePerOre, int OrePerClay, int OrePerObsidian, 
             maxBuild = result.Build;
         }
 
-        if (result.Build.Length > 14)
+        if (result.Build.Length > 12)
         {
             // Has more than 1 robot left unbuilt
             if (result.Unbuilt > 1)
                 continue;
-            // Build is 2 more robots than best result
+            // Build is 2 or more robots than best result
             if (result.Build.Length - maxBuild.Length > 2)
                 continue;
             // Has lower output of geodes
@@ -126,6 +129,7 @@ int CaclulateGeodes((int ID, int OrePerOre, int OrePerClay, int OrePerObsidian, 
     }
 
     Console.WriteLine($"{blueprint}={maxBuild}={maxGeodes}");
+    //PrintBuild(blueprint, maxBuild);
     return maxGeodes;
 }
 
@@ -151,3 +155,78 @@ IEnumerable<string> GetBuilds(string build, int numOre, int numClay, int numObsi
 
     yield break;
 }
+
+void PrintBuild((int ID, int OrePerOre, int OrePerClay, int OrePerObsidian, int ClayPerObsidian, int OrePerGeode, int ObsidianPerGeode) blueprint, string build)
+{
+    int robotsOre = 1, robotsClay = 0, robotsObsidian = 0, robotsGeode = 0;
+    int itemsOre = 0, itemsClay = 0, itemsObsidian = 0, itemsGeode = 0;
+    int buildOrder = 0;
+
+    for (int i = 1; i <= 24; i++)
+    {
+        Console.WriteLine($"== Minute {i} ==");
+        var nextBuild = buildOrder < build.Length ? build[buildOrder] : '.';
+
+        int buildOre = 0, buildClay = 0, buildObsidian = 0, buildGeode = 0;
+        if (nextBuild == 'O' && itemsOre >= blueprint.OrePerOre)
+        {
+            buildOre++;
+            itemsOre -= blueprint.OrePerOre;
+            buildOrder++;
+            Console.WriteLine($"Spend {blueprint.OrePerOre} ore to start building an ore-collecting robot.");
+        }
+        else if (nextBuild == 'C' && itemsOre >= blueprint.OrePerClay)
+        {
+            buildClay++;
+            itemsOre -= blueprint.OrePerClay;
+            buildOrder++;
+            Console.WriteLine($"Spend {blueprint.OrePerClay} ore to start building a clay-collecting robot.");
+        }
+        else if (nextBuild == 'B' && itemsOre >= blueprint.OrePerObsidian && itemsClay >= blueprint.ClayPerObsidian)
+        {
+            buildObsidian++;
+            itemsOre -= blueprint.OrePerObsidian;
+            itemsClay -= blueprint.ClayPerObsidian;
+            buildOrder++;
+            Console.WriteLine($"Spend {blueprint.OrePerObsidian} ore and {blueprint.ClayPerObsidian} clay to start building an obsidisn-collecting robot.");
+        }
+        else if (nextBuild == 'G' && itemsOre >= blueprint.OrePerGeode && itemsObsidian >= blueprint.ObsidianPerGeode)
+        {
+            buildGeode++;
+            itemsOre -= blueprint.OrePerGeode;
+            itemsObsidian -= blueprint.ObsidianPerGeode;
+            buildOrder++;
+            Console.WriteLine($"Spend {blueprint.OrePerGeode} ore and {blueprint.ObsidianPerGeode} obsidian to start building a geode-cracking robot.");
+        }
+
+        itemsOre += robotsOre;
+        itemsClay += robotsClay;
+        itemsObsidian += robotsObsidian;
+        itemsGeode += robotsGeode;
+
+        if (robotsOre> 0)
+            Console.WriteLine($"{robotsOre} ore-collecting robot collects {robotsOre} ore; you now have {itemsOre} ore.");
+        if (robotsClay > 0)
+            Console.WriteLine($"{robotsClay} clay-collecting robot collects {robotsClay} clay; you now have {itemsClay} clay.");
+        if (robotsObsidian > 0)
+            Console.WriteLine($"{robotsObsidian} obsidian-collecting robot collects {robotsObsidian} obsidian; you now have {itemsObsidian} obsidian.");
+        if (robotsGeode > 0)
+            Console.WriteLine($"{robotsGeode} geode-cracking robot cracks {robotsGeode} geodes; you now have {itemsGeode} geodes.");
+
+        robotsOre += buildOre;
+        robotsClay += buildClay;
+        robotsObsidian += buildObsidian;
+        robotsGeode += buildGeode;
+
+        if (buildOre > 0)
+            Console.WriteLine($"The new ore-collecting robot is ready; you now have {robotsOre} of them.");
+        if (buildClay > 0)
+            Console.WriteLine($"The new clay-collecting robot is ready; you now have {robotsClay} of them.");
+        if (buildObsidian > 0)
+            Console.WriteLine($"The new obsidian-collecting robot is ready; you now have {robotsObsidian} of them.");
+        if (buildGeode > 0)
+            Console.WriteLine($"The new geode-cracking robot is ready; you now have {robotsGeode} of them.");
+        Console.WriteLine();
+    }
+}
+
