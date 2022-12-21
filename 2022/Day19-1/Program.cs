@@ -106,7 +106,7 @@ int CaclulateGeodes((int ID, int OrePerOre, int OrePerClay, int OrePerObsidian, 
 
         if (result.Build.Length > 14)
         {
-            //// Has more than 1 robot left unbuilt
+            // Has more than 1 robot left unbuilt
             if (result.Unbuilt > 1)
                 continue;
             // Build is 2 more robots than best result
