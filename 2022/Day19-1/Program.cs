@@ -14,86 +14,70 @@ var blueprints = File.ReadLines("input.txt").Select(line =>
 }).ToArray();
 
 var results = new Dictionary<int, int>();
+int bestResult = 0;
+var bestBuild = "";
+Blueprint blueprint;
+var maxOre = 0;
 
-foreach (var blueprint in blueprints)
+foreach (var bp in blueprints)
 {
-    var geodes = CaclulateGeodes(blueprint);
-    results[blueprint.ID] = geodes;
-}
+    blueprint = bp;
+    maxOre = new[] { blueprint.OrePerOre, blueprint.OrePerClay, blueprint.OrePerObsidian, blueprint.OrePerGeode }.Max();
+    bestResult = 0;
+    bestBuild = "";
 
+    ProcessMinute(1, "", 1);
+    Console.WriteLine($"{blueprint.ID,2}: {bestBuild}={bestResult,2}");
+
+    results[blueprint.ID] = bestResult;
+}
 var final = results.Sum(r => r.Key * r.Value);
 Console.WriteLine(final);
 
-int CaclulateGeodes(Blueprint blueprint)
-{
-    var results = ProcessMinute(blueprint, 1, "", new TypeCounts(1, 0, 0, 0), new TypeCounts());
-
-    Console.WriteLine($"{blueprint.ID,2} = {results.Geodes,2} {results.Build}");
-    return results.Geodes;
-}
-
-(string Build, int Geodes) ProcessMinute(Blueprint blueprint, int minute, string build, TypeCounts robots, TypeCounts items)
+void ProcessMinute(int minute, string build, int robotsOre = 0, int robotsClay = 0, int robotsObsidian = 0, int robotsGeode = 0, int itemsOre = 0, int itemsClay = 0, int itemsObsidian = 0, int itemsGeode = 0)
 {
     if (minute == 24)
     {
-        //Console.WriteLine($"{blueprint.ID,2} {build}={items.Geode + robots.Geode}");
-        return (build, items.Geode + robots.Geode);
+        var finalGeodes = itemsGeode + robotsGeode;
+        if (finalGeodes > bestResult)
+        {
+            bestResult = finalGeodes;
+            bestBuild = build;
+        }
+        return;
     }
+    var totalPossible = itemsGeode + (24 - minute + 1) * robotsGeode + (24 - minute) * (24 - minute + 1) / 2;
+    if (totalPossible < bestResult)
+        return;
 
-    var options = new List<string>();
-
-    if (minute < 24 && items.Ore >= blueprint.OrePerGeode && items.Obsidian >= blueprint.ObsidianPerGeode)
-        options.Add("G");
+    if (minute < 24 && itemsOre >= blueprint.OrePerGeode && itemsObsidian >= blueprint.ObsidianPerGeode)
+        RunOption("G");
     else
     {
-        if (minute < 22 && items.Ore >= blueprint.OrePerObsidian && items.Clay >= blueprint.ClayPerObsidian)
-            options.Add("B");
-
-        if (minute < 20 && items.Ore >= blueprint.OrePerClay)
-            options.Add("C");
-
-        if (minute < 22 && items.Ore >= blueprint.OrePerOre)
-        {
-            //if (build.IndexOf('C') < 0 || build.IndexOfAny(new[] { 'B', 'G' }) >= 0)
-            {
-                var maxOre = new[] { blueprint.OrePerOre, blueprint.OrePerClay, blueprint.OrePerObsidian, blueprint.OrePerGeode }.Max();
-                var totalMax = (24 - minute) * maxOre;
-                if (robots.Ore * (24 - minute) + items.Ore < totalMax)
-                    options.Add("O");
-            }
-        }
+        if (minute < 22 && itemsOre >= blueprint.OrePerObsidian && itemsClay >= blueprint.ClayPerObsidian)
+            RunOption("B");
+        if (minute < 20 && itemsOre >= blueprint.OrePerClay)
+            RunOption("C");
+        RunOption("");
+        if (minute < 22 && itemsOre >= blueprint.OrePerOre && robotsOre < maxOre)
+            RunOption("O");
     }
-    if (!options.Any(o => o == "G"))
-        //if (options.Count == 0 || items.Ore + robots.Ore <= blueprint.OrePerOre + blueprint.OrePerClay + blueprint.OrePerObsidian + blueprint.OrePerGeode)
-            options.Add("");
 
-    items.Ore += robots.Ore;
-    items.Clay += robots.Clay;
-    items.Obsidian += robots.Obsidian;
-    items.Geode += robots.Geode;
-    minute++;
-
-    var results = options.Select(o =>
+    void RunOption(string option)
     {
-        var optRobots = new TypeCounts
-        {
-            Ore = robots.Ore + (o == "O" ? 1 : 0),
-            Clay = robots.Clay + (o == "C" ? 1 : 0),
-            Obsidian = robots.Obsidian + (o == "B" ? 1 : 0),
-            Geode = robots.Geode + (o == "G" ? 1 : 0)
-        };
-        var optItems = new TypeCounts
-        {
-            Ore = items.Ore - (o switch { "O" => blueprint.OrePerOre, "C" => blueprint.OrePerClay, "B" => blueprint.OrePerObsidian, "G" => blueprint.OrePerGeode, _ => 0 }),
-            Clay = items.Clay - (o == "B" ? blueprint.ClayPerObsidian : 0),
-            Obsidian = items.Obsidian - (o == "G" ? blueprint.ObsidianPerGeode : 0),
-            Geode = items.Geode
-        };
-        return ProcessMinute(blueprint, minute, build + o, optRobots, optItems);
-    });
-
-    return results.MaxBy(r => r.Geodes);
+        ProcessMinute(
+            minute + 1,
+            build + option,
+            robotsOre + (option == "O" ? 1 : 0), 
+            robotsClay + (option == "C" ? 1 : 0), 
+            robotsObsidian + (option == "B" ? 1 : 0), 
+            robotsGeode + (option == "G" ? 1 : 0),
+            itemsOre + robotsOre - (option switch { "O" => blueprint.OrePerOre, "C" => blueprint.OrePerClay, "B" => blueprint.OrePerObsidian, "G" => blueprint.OrePerGeode, _ => 0 }), 
+            itemsClay + robotsClay - (option == "B" ? blueprint.ClayPerObsidian : 0), 
+            itemsObsidian + robotsObsidian - (option == "G" ? blueprint.ObsidianPerGeode : 0), 
+            itemsGeode + robotsGeode
+        );
+    }
 }
 
 record struct Blueprint (int ID, int OrePerOre, int OrePerClay, int OrePerObsidian, int ClayPerObsidian, int OrePerGeode, int ObsidianPerGeode, string Line);
-record struct TypeCounts (int Ore, int Clay, int Obsidian, int Geode);
