@@ -14,27 +14,29 @@ var blueprints = File.ReadLines("input.txt").Select(line =>
 }).ToArray();
 
 var totalMinutes = 32;
+Blueprint blueprint = default!;
 var maxResult = 0;
 
 var results = new Dictionary<int, int>();
-foreach (var blueprint in blueprints[0..3])
+foreach (var blueprintt in blueprints[0..3])
 {
     maxResult = 0;
-    var geodes = CaclulateGeodes(blueprint);
-    results[blueprint.ID] = geodes;
+    blueprint = blueprintt;
+    var geodes = CaclulateGeodes();
+    results[blueprintt.ID] = geodes;
 }
 Console.WriteLine(results[1] * results[2] * results[3]);
 //Console.WriteLine(results.Sum(r => r.Key * r.Value));
 
-int CaclulateGeodes(Blueprint blueprint)
+int CaclulateGeodes()
 {
-    var results = ProcessMinute(blueprint, 1, "", new TypeCounts(1, 0, 0, 0), new TypeCounts());
+    var results = ProcessMinute(1, "", new TypeCounts(1, 0, 0, 0), new TypeCounts());
 
     Console.WriteLine($"{blueprint.ID,2} = {results.Geodes,2} {results.Build}");
     return results.Geodes;
 }
 
-(string Build, int Geodes) ProcessMinute(Blueprint blueprint, int minute, string build, TypeCounts robots, TypeCounts items)
+(string Build, int Geodes) ProcessMinute(int minute, string build, TypeCounts robots, TypeCounts items)
 {
     if (minute == totalMinutes)
     {
@@ -103,7 +105,7 @@ int CaclulateGeodes(Blueprint blueprint)
             Obsidian = items.Obsidian - (o == "G" ? blueprint.ObsidianPerGeode : 0),
             Geode = items.Geode
         };
-        return ProcessMinute(blueprint, minute, build + o, optRobots, optItems);
+        return ProcessMinute(minute, build + o, optRobots, optItems);
     });
 
     return results.MaxBy(r => r.Geodes);
