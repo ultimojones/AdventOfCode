@@ -10,7 +10,7 @@ for (int y = 1; !string.IsNullOrEmpty(line); y++, line = file.ReadLine())
     }
 }
 var path = file.ReadLine();
-var cmds = new List<(int?, char?)>();
+var cmds = new List<(int? Move, char? Turn)>();
 int NextDir(int i) => path.IndexOfAny(new[] { 'R', 'L' }, i);
 for (int i = 0, j = NextDir(0); i < path.Length; i = j + 1, j = NextDir(i))
 {
@@ -30,7 +30,29 @@ var maxX = grid.Keys.Max(k => k.X);
 var maxY = grid.Keys.Max(k => k.Y);
 
 var start = grid.Keys.MinBy(k => k.X);
+var dir = '>';
 
+foreach (var cmd in cmds)
+{
+    if (cmd.Move.HasValue)
+    {
+        var move = grid
+    }
+    else
+    {
+        dir = (cmd.Turn, dir) switch
+        {
+            ('R', '>') => 'v',
+            ('R', 'v') => '<',
+            ('R', '<') => '^',
+            ('R', '^') => '>',
+            ('L', '>') => '^',
+            ('L', 'v') => '>',
+            ('L', '<') => 'v',
+            ('L', '^') => '<',
+        };
+    }
+}
 
 
 
