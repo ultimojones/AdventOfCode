@@ -29,18 +29,34 @@ for (int i = 0, j = NextDir(0); i < path.Length; i = j + 1, j = NextDir(i))
 var maxX = grid.Keys.Max(k => k.X);
 var maxY = grid.Keys.Max(k => k.Y);
 
-var start = grid.Keys.MinBy(k => k.X);
+var pos = grid.Keys.Where(k => k.Y == 1).MinBy(k => k.X);
 var dir = '>';
+grid[pos] = dir;
 
-foreach (var cmd in cmds)
+foreach (var cmd in cmds.Take(1))
 {
     if (cmd.Move.HasValue)
     {
-        var move = grid
+        if (dir == '>')
+        {
+            var axis = grid.Where(g => g.Key.Y == pos.Y);
+            var min = axis.Min(g => g.Key.X);
+            var max = axis.Max(g => g.Key.X);
+            var range = max - min + 1;
+            var start = pos;
+            for (int i = 1, x = start.X; i < cmd.Move.Value ; i++)
+            {
+                x = (x + 1 - min) % range + min;
+                if (grid[(x, pos.Y)] == '#') break;
+
+                pos.X = x;
+                grid[pos] = dir;
+            }
+        }
     }
     else
     {
-        dir = (cmd.Turn, dir) switch
+        grid[pos] = dir = (cmd.Turn, dir) switch
         {
             ('R', '>') => 'v',
             ('R', 'v') => '<',
@@ -50,10 +66,12 @@ foreach (var cmd in cmds)
             ('L', 'v') => '>',
             ('L', '<') => 'v',
             ('L', '^') => '<',
+            _ => throw new NotImplementedException()
         };
     }
 }
 
+PrintGrid();
 
 
 void PrintGrid()
