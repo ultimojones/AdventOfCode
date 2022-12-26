@@ -6,7 +6,7 @@ var len = items.Length;
 
 foreach (var item in items)
 {
-    Console.WriteLine(item);
+    //Console.WriteLine(item);
     var cur = list.Find(item)!;
     for (int i = 0; i < Math.Abs(cur.Value.x); i++)
     {
@@ -17,7 +17,12 @@ foreach (var item in items)
         }
         else
         {
-            next = cur.Previous?.Previous ?? list.Last!;
+            if (cur.Previous == null)
+                next = list.Last!.Previous!;
+            else if (cur.Previous.Previous == null)
+                next = list.Last!;
+            else
+                next = cur.Previous.Previous;
         }
         list.Remove(cur);
         list.AddAfter(next, cur);

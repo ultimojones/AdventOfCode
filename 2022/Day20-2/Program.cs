@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-var items = File.ReadLines("sample.txt").Select((x, p) => (p, x: long.Parse(x) * 811589153)).ToArray();
+var items = File.ReadLines("input.txt").Select((x, p) => (p, x: long.Parse(x) * 811589153)).ToArray();
 var list = new LinkedList<(int p, long x)>(items);
 var len = items.Length;
 
@@ -14,12 +14,15 @@ for (int l = 0; l < 10; l++)
         {
             LinkedListNode<(int, long)> next;
             if (cur.Value.x > 0)
-            {
                 next = cur.Next ?? list.First!;
-            }
             else
             {
-                next = cur.Previous?.Previous ?? list.Last!;
+                if (cur.Previous == null)
+                    next = list.Last!.Previous!;
+                else if (cur.Previous.Previous == null)
+                    next = list.Last!;
+                else
+                    next = cur.Previous.Previous;
             }
             list.Remove(cur);
             list.AddAfter(next, cur);
