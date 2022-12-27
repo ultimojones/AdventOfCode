@@ -72,44 +72,64 @@ try
     {
         if (cmd.Move.HasValue)
         {
-            if (dir == '>' || dir == '<')
+            for (int i = 0; i < cmd.Move.Value; i++)
             {
-                var axis = grid.Where(g => g.Key.Y == pos.Y);
-                var min = axis.Min(g => g.Key.X);
-                var max = axis.Max(g => g.Key.X);
-                var range = max - min + 1;
-                var start = pos;
-                var offset = dir == '>' ? 1 : -1;
-                for (int i = 0, x = start.X; i < cmd.Move.Value; i++)
+                (int X, int Y) next = dir switch
                 {
-                    x = x == min && offset == -1 ? max
-                      : x == max && offset == 1 ? min
-                      : x + offset;
-                    if (grid[(x, pos.Y)] == '#') break;
-
-                    pos.X = x;
-                    grid[pos] = dir;
-                }
-            }
-            else if (dir == 'v' || dir == '^')
-            {
-                var axis = grid.Where(g => g.Key.X == pos.X);
-                var min = axis.Min(g => g.Key.Y);
-                var max = axis.Max(g => g.Key.Y);
-                var range = max - min + 1;
-                var start = pos;
-                var offset = dir == 'v' ? 1 : -1;
-                for (int i = 0, y = start.Y; i < cmd.Move.Value; i++)
+                    '>' => (pos.X + 1, pos.Y),
+                    'v' => (pos.X, pos.Y + 1),
+                    '<' => (pos.X - 1, pos.Y),
+                    '^' => (pos.X, pos.Y - 1),
+                    _ => throw new NotImplementedException()
+                };
+                if (links.TryGetValue((next.X, next.Y, dir), out var dest))
                 {
-                    y = y == min && offset == -1 ? max
-                      : y == max && offset == 1 ? min
-                      : y + offset;
-                    if (grid[(pos.X, y)] == '#') break;
-
-                    pos.Y = y;
-                    grid[pos] = dir;
+                    next = (dest.X, dest.Y);
                 }
+                if (grid[next] == '#') break;
+                if (dest.dir > 0) dir = dest.dir;
+                pos = next;
+                grid[pos] = dir;
             }
+
+            //if (dir == '>' || dir == '<')
+            //{
+            //    var axis = grid.Where(g => g.Key.Y == pos.Y);
+            //    var min = axis.Min(g => g.Key.X);
+            //    var max = axis.Max(g => g.Key.X);
+            //    var range = max - min + 1;
+            //    var start = pos;
+            //    var offset = dir == '>' ? 1 : -1;
+            //    for (int i = 0, x = start.X; i < cmd.Move.Value; i++)
+            //    {
+            //        x = x == min && offset == -1 ? max
+            //          : x == max && offset == 1 ? min
+            //          : x + offset;
+            //        if (grid[(x, pos.Y)] == '#') break;
+
+            //        pos.X = x;
+            //        grid[pos] = dir;
+            //    }
+            //}
+            //else if (dir == 'v' || dir == '^')
+            //{
+            //    var axis = grid.Where(g => g.Key.X == pos.X);
+            //    var min = axis.Min(g => g.Key.Y);
+            //    var max = axis.Max(g => g.Key.Y);
+            //    var range = max - min + 1;
+            //    var start = pos;
+            //    var offset = dir == 'v' ? 1 : -1;
+            //    for (int i = 0, y = start.Y; i < cmd.Move.Value; i++)
+            //    {
+            //        y = y == min && offset == -1 ? max
+            //          : y == max && offset == 1 ? min
+            //          : y + offset;
+            //        if (grid[(pos.X, y)] == '#') break;
+
+            //        pos.Y = y;
+            //        grid[pos] = dir;
+            //    }
+            //}
         }
         else
         {
