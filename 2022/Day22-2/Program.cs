@@ -1,5 +1,5 @@
 ﻿var grid = new Dictionary<(int X, int Y), char>();
-var links = new Dictionary<(int X, int Y), (int X, int Y, char dir)>();
+var links = new Dictionary<(int X, int Y, char dir), (int X, int Y, char dir)>();
 var file = File.OpenText("input.txt");
 string? line = file.ReadLine();
 for (int y = 1; !string.IsNullOrEmpty(line); y++, line = file.ReadLine())
@@ -28,42 +28,39 @@ for (int i = 0, j = NextDir(0); i < path.Length; i = j + 1, j = NextDir(i))
 }
 
 for (int fromX = 1, toY = 51; fromX < 51; fromX++, toY++)
-    links[(fromX, 100)] = (51, toY, '>');
-for (int fromX = 51, toY = 151; fromX < 101; fromX++, toY++ )
-    links[(fromX, 0)] = (1, toY, '>');
-for (int fromX = 101, toX = 1; fromX < 151; fromX++, toX++)
-    links[(fromX, 0)] = (toX, 200, '^');
-
-for (int fromY = 1, toY = 101; fromY < 51; fromY++, toY--)
-    links[(151, fromY)] = (100, toY, '<');
-for (int fromY = 51, toX = 101; fromY < 101; fromY++, toX++)
-    links[(101, fromY)] = (toX, 50, '^');
-for (int fromY = 101, toY = 50; fromY < 151; fromY++, toY--)
-    links[(101, fromY)] = (150, toY, '<');
-for (int fromY = 151, toX = 51; fromY < 201; fromY++, toX--)
-    links[(51, fromY)] = (toX, 150, '^');
-
-for (int fromX = 1, toX = 101; fromX < 51; fromX++, toX++)
-    links[(fromX, 201)] = (toX, 1, 'v');
+    links.Add((fromX, 100, '^'), (51, toY, '>'));
 for (int fromX = 51, toY = 151; fromX < 101; fromX++, toY++)
-    links[(fromX, 151)] = (50, toY, '<');
-for (int fromX = 101, toY = 51; fromX < 151; fromX++, toY++)
-    links[(fromX, 51)] = (100, toY, '<');
+    links.Add((fromX, 0, '^'), (1, toY, '>'));
+for (int fromX = 101, toX = 1; fromX < 151; fromX++, toX++)
+    links.Add((fromX, 0, '^'), (toX, 200, '^'));
 
 for (int fromY = 1, toY = 150; fromY < 51; fromY++, toY--)
-    links[(50, fromY)] = (1, toY, '>');
-for (int fromY = 51, toX = 1; fromY < 101; fromY++, toX++)
-    links[(50, fromY)] = (toX, 101, 'v');
+    links.Add((151, fromY, '>'), (100, toY, '<'));
+for (int fromY = 51, toX = 101; fromY < 101; fromY++, toX++)
+    links.Add((101, fromY, '>'), (toX, 50, '^'));
 for (int fromY = 101, toY = 50; fromY < 151; fromY++, toY--)
-    links[(0, fromY)] = (51, toY, '>');
+    links.Add((101, fromY, '>'), (150, toY, '<'));
 for (int fromY = 151, toX = 51; fromY < 201; fromY++, toX++)
-    links[(0, fromY)] = (toX, 1, 'v');
+    links.Add((51, fromY, '>'), (toX, 150, '^'));
+
+for (int fromX = 1, toX = 101; fromX < 51; fromX++, toX++)
+    links.Add((fromX, 201, 'v'), (toX, 1, 'v'));
+for (int fromX = 51, toY = 151; fromX < 101; fromX++, toY++)
+    links.Add((fromX, 151, 'v'), (50, toY, '<'));
+for (int fromX = 101, toY = 51; fromX < 151; fromX++, toY++)
+    links.Add((fromX, 51, 'v'), (100, toY, '<'));
+
+for (int fromY = 1, toY = 150; fromY < 51; fromY++, toY--)
+    links.Add((50, fromY, '<'), (1, toY, '>'));
+for (int fromY = 51, toX = 1; fromY < 101; fromY++, toX++)
+    links.Add((50, fromY, '<'), (toX, 101, 'v'));
+for (int fromY = 101, toY = 50; fromY < 151; fromY++, toY--)
+    links.Add((0, fromY, '<'), (51, toY, '>'));
+for (int fromY = 151, toX = 51; fromY < 201; fromY++, toX++)
+    links.Add((0, fromY, '<'), (toX, 1, 'v'));
 
 var maxX = grid.Keys.Max(k => k.X);
 var maxY = grid.Keys.Max(k => k.Y);
-
-PrintLinks();
-return;
 
 var pos = grid.Keys.Where(k => k.Y == 1).MinBy(k => k.X);
 var dir = '>';
@@ -157,12 +154,12 @@ void PrintGrid()
 
 void PrintLinks()
 {
-    for (int y = 0; y < maxY + 1; y++)
+    for (int y = 0; y < maxY + 2; y++)
     {
         var chars = Enumerable.Repeat(' ', maxX + 2).ToArray();
         foreach (var point in links.Where(g => g.Key.Y == y))
         {
-            chars[point.Key.X] = '+';
+            chars[point.Key.X] = point.Key.dir;
         }
         foreach (var point in links.Where(g => g.Value.Y == y))
         {
