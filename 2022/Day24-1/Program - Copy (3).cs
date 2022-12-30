@@ -1,6 +1,5 @@
-﻿/*
- * That's not the right answer; your answer is too high. If you're stuck, make sure you're using the full input data; there are also some general tips on the about page, or you can ask for hints on the subreddit. Please wait one minute before trying again. (You guessed 304.) [Return to Day 24]
- */
+﻿using System.Drawing;
+using System.Linq;
 
 var border = new List<(int X, int Y)>();
 var startBlizzards = new List<((int X, int Y) Point, char Dir)>();
@@ -28,55 +27,50 @@ var blizMaxX = gridMaxX - 1;
 var blizMaxY = gridMaxY - 1;
 var sta = (X: 1, Y: 0);
 var fin = (X: blizMaxX, Y: gridMaxY);
-var result = int.MaxValue;
+var result = 0;
 
 var visited = new HashSet<((int X, int Y) Point, int Turn)>();
 var pending = new HashSet<((int X, int Y) Point, int Turn)>();
 
 var cur = sta;
 
-do
+while (result == 0)
 {
-    int i = 1;
-    if (cur != sta)
-    {
-        var next = pending.MinBy(m => (fin.X - m.Point.X) + (fin.Y - m.Point.Y));
-        cur = next.Point;
-        i = next.Turn;
-        pending.Remove(next);
-    }
-    var from = cur;
-
-    for (; i < 500; i++)
+    for (int i = 1; ; i++)
     {
         visited.Add((cur, i));
         var blizzards = GetBlizzardLocns(i).ToList();
         var moves = Neighbours(cur).Append(cur).Where(m => !blizzards.Contains(m) && !visited.Contains((m, i + 1))).ToList();
 
-        if (moves.Count > 0)
+        if (moves.Count == 0)
         {
-            cur = moves.MinBy(m => fin.X - m.X + fin.Y - m.Y);
-            foreach (var point in moves)
-            {
-                if (point != cur)
-                    pending.Add((point, i + 1));
-            }
-
-            if (cur == fin)
-            {
-                if (i < result)
-                    result = i;
-                Console.WriteLine($"FROM {from} FINISH: {i}  BEST: {result}");
-                break;
-            }
+            PrintGrid(blizzards, cur);
+            Console.WriteLine($"{cur} @ {i}");
+            Console.WriteLine();
+            var next = pending.MinBy(m => fin.X - m.Point.X + fin.Y - m.Point.Y);
+            cur = next.Point;
+            i = next.Turn;
+            pending.Remove(next);
+            continue;
         }
-        else
+
+
+        cur = moves.MinBy(m => fin.X - m.X + fin.Y - m.Y);
+        foreach (var point in moves)
         {
-            //Console.WriteLine($"{cur} @ {i}");
+            if (point != cur)
+                pending.Add((point, i + 1));
+        }
+        
+        if (cur == fin)
+        {
+            result = i;
+            Console.WriteLine(i);
             break;
         }
     }
-} while (pending.Count > 0);
+}
+
 IEnumerable<(int X, int Y)> Neighbours((int X, int Y) cur)
 {
     return new (int X, int Y)[] { cur, (cur.X - 1, cur.Y), (cur.X + 1, cur.Y), (cur.X, cur.Y - 1), (cur.X, cur.Y + 1) }

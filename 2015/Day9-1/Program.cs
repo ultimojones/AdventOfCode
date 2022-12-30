@@ -1,99 +1,54 @@
-﻿using System.Linq;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
-var distances = File.ReadLines("sample.txt").Select(line =>
+var cities = new Dictionary<string, Dictionary<string, int>>();
+
+foreach (var line in File.ReadLines("input.txt"))
 {
     var match = Regex.Match(line, @"^(?<A>\w+) to (?<B>\w+) = (?<D>\d+)$");
     var A = match.Groups["A"].Value;
     var B = match.Groups["B"].Value;
     var D = int.Parse(match.Groups["D"].Value);
-    return (A, B, D);
-}).ToArray();
+    if (cities.TryGetValue(A, out var cityA)) 
+        cityA.Add(B, D); 
+    else
+        cities[A] = new Dictionary<string, int> { { B, D } };
+    if (cities.TryGetValue(B, out var cityB))
+        cityB.Add(A, D);
+    else
+        cities[B] = new Dictionary<string, int> { { A, D } };
+}
 
-var stops = distances.SelectMany(d => new[] { d.A, d.B }).Distinct().ToArray();
-var legs = stops.Length - 1;
-
-foreach (var start in stops)
+foreach (var city in cities)
 {
-    var routes = GetRoutes(start, Array.Empty<(string, string, int)>());
+    Console.WriteLine($"{city.Key}: {string.Join(' ', city.Value)}");
+}
 
-    foreach (var route in routes)
+List<string> bestRoute;
+int bestDist = 0;
+
+foreach (var city in cities.Keys)
+{
+    FindShortest(city, 0, Array.Empty<string>(), cities.Keys.Except(new[] { city }));
+}
+
+void FindShortest(string cur, int dist, IEnumerable<string> route, IEnumerable<string> dests)
+{
+    var curRoute = route.Append(cur).ToList();
+
+    if (!dests.Any())
     {
-        foreach (var leg in route)
+        if (bestDist == 0 || dist > bestDist)
         {
-            Console.Write($"{leg.A}-{leg.B}={leg.D}|");
+            bestDist = dist;
+            bestRoute = curRoute;
+            Console.WriteLine($"{string.Join("->", curRoute)} = {dist}");
         }
-        Console.WriteLine(route.Sum(l => l.D));
     }
-}
-
-(string A, string B, int D)[][] GetRoutes(string start, (string A, string B, int D)[] route)
-{
-    if (route.Length == legs)
-        return new[] { route };
-
-    var visited = route.SelectMany(r => new[] { r.A, r.B }).Distinct().ToArray();
-    var candidates = distances.Where(d => (d.A == start || d.B == start) && (!visited.Any(v => v == d.A || v == d.B))).ToArray();
-    var newRoutes = candidates
-        .SelectMany(l =>
-        {
-            var newLeg = l.A == start ? l : (A: l.B, B: l.A, D: l.D);
-            var newRoute = route.Append(newLeg).ToArray();
-            var subroutes = GetRoutes(newLeg.B, newRoute);
-            return subroutes;
-        }).ToArray();
-
-    return newRoutes;
-}
-
-
-
-
-
-
-
-class Leg
-{
-    public string Depart { get; set; }
-    public string Arrive { get; set; }
-    public int Distance { get; set; }
-    public Leg(string depart, string arrive, int distance)
+    else
     {
-        Depart = depart;
-        Arrive = arrive;
-        Distance = distance;
+        foreach (var dest in dests)
+        {
+            FindShortest(dest, dist + cities![cur][dest], curRoute, dests.Except(new[] { dest }));
+        }
     }
 }
-
-
-
-
-
-
-
-//IEnumerable<(string, string, int)[]> GetRoutes(string start, (string Depart, string Arrive, int Distance)[] route)
-//{
-//    var visited = route.Select(r => r.Depart).Concat(route.Select(r => r.Arrive)).Distinct().ToArray();
-//    return legs.Where(l => l.Depart == start)
-//    //var routes = legs.Where(l => l.Depart == start && !visited.Contains(l.Arrive))
-//        .SelectMany(l =>
-//        {
-//            var newRoute = route.Append(l).ToArray();
-//            return GetRoutes(l.Arrive, newRoute);
-
-//        });
-//}
-
-
-//foreach (var start in starts)
-//{
-//    var stops = ends.Except(new[] { start }).ToList();
-//    var routes = GetRoutes(start, stops);
-//    routes.ToList().ForEach(r => Console.WriteLine(r));
-//}
-
-//IEnumerable<(string, string, int)> GetRoutes(string start, IEnumerable<string> stops)
-//{
-//    return legs.Where(l => l.Depart == start && stops.Contains(l.Arrive))
-//        .SelectMany(l => new[] { l }.Concat(GetRoutes(l.Arrive, stops.Except(new[] { l.Arrive }))));
-//}

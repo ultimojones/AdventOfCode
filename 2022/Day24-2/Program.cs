@@ -33,21 +33,26 @@ var result = int.MaxValue;
 var visited = new HashSet<((int X, int Y) Point, int Turn)>();
 var pending = new HashSet<((int X, int Y) Point, int Turn)>();
 
-var cur = sta;
+// 264 + 266 + 259
+
+var bgn = sta;
+var tgt = fin;
+var cur = bgn;
+int i = 531;
+int min = i - 1;
 
 do
 {
-    int i = 1;
-    if (cur != sta)
+    if (cur != bgn)
     {
-        var next = pending.MinBy(m => (fin.X - m.Point.X) + (fin.Y - m.Point.Y));
+        var next = pending.MinBy(m => Math.Abs(tgt.X - m.Point.X) + Math.Abs(tgt.Y - m.Point.Y));
         cur = next.Point;
         i = next.Turn;
         pending.Remove(next);
     }
     var from = cur;
 
-    for (; i < 500; i++)
+    for (; i < 1500; i++)
     {
         visited.Add((cur, i));
         var blizzards = GetBlizzardLocns(i).ToList();
@@ -55,18 +60,18 @@ do
 
         if (moves.Count > 0)
         {
-            cur = moves.MinBy(m => fin.X - m.X + fin.Y - m.Y);
+            cur = moves.MinBy(m => Math.Abs(tgt.X - m.X) + Math.Abs(tgt.Y - m.Y));
             foreach (var point in moves)
             {
                 if (point != cur)
                     pending.Add((point, i + 1));
             }
 
-            if (cur == fin)
+            if (cur == tgt)
             {
                 if (i < result)
                     result = i;
-                Console.WriteLine($"FROM {from} FINISH: {i}  BEST: {result}");
+                Console.WriteLine($"FROM {from} FINISH: {i}  BEST: {result - min}");
                 break;
             }
         }
@@ -76,11 +81,11 @@ do
             break;
         }
     }
-} while (pending.Count > 0);
+} while (pending.Count > 0 && cur != bgn);
 IEnumerable<(int X, int Y)> Neighbours((int X, int Y) cur)
 {
-    return new (int X, int Y)[] { cur, (cur.X - 1, cur.Y), (cur.X + 1, cur.Y), (cur.X, cur.Y - 1), (cur.X, cur.Y + 1) }
-        .Where(p => (p.X >= 1 && p.X <= blizMaxX && p.Y >= 1 && p.Y <= blizMaxY) || p == fin);
+    return new (int X, int Y)[] { (cur.X - 1, cur.Y), (cur.X + 1, cur.Y), (cur.X, cur.Y - 1), (cur.X, cur.Y + 1) }
+        .Where(p => (p.X >= 1 && p.X <= blizMaxX && p.Y >= 1 && p.Y <= blizMaxY) || p == fin | p == sta);
 }
 
 IEnumerable<(int X, int Y)> GetBlizzardLocns(int turn)

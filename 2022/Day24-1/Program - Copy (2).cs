@@ -1,10 +1,9 @@
-﻿/*
- * That's not the right answer; your answer is too high. If you're stuck, make sure you're using the full input data; there are also some general tips on the about page, or you can ask for hints on the subreddit. Please wait one minute before trying again. (You guessed 304.) [Return to Day 24]
- */
+﻿using System.Drawing;
+using System.Linq;
 
 var border = new List<(int X, int Y)>();
 var startBlizzards = new List<((int X, int Y) Point, char Dir)>();
-var lines = File.ReadAllLines("input.txt");
+var lines = File.ReadAllLines("sample.txt");
 for (int y = 0; y < lines.Length; y++)
 {
     for (int x = 0; x < lines[y].Length; x++)
@@ -28,55 +27,51 @@ var blizMaxX = gridMaxX - 1;
 var blizMaxY = gridMaxY - 1;
 var sta = (X: 1, Y: 0);
 var fin = (X: blizMaxX, Y: gridMaxY);
-var result = int.MaxValue;
+var result = 0;
 
-var visited = new HashSet<((int X, int Y) Point, int Turn)>();
-var pending = new HashSet<((int X, int Y) Point, int Turn)>();
+var paths = new Dictionary<((int X, int Y) From, int Turn), List<(int X, int Y)>>();
+var deadpoints = new HashSet<(int X, int Y, int Turn)>();
 
 var cur = sta;
 
-do
+while (result == 0)
 {
-    int i = 1;
-    if (cur != sta)
+    for (int i = 1; ; i++)
     {
-        var next = pending.MinBy(m => (fin.X - m.Point.X) + (fin.Y - m.Point.Y));
-        cur = next.Point;
-        i = next.Turn;
-        pending.Remove(next);
-    }
-    var from = cur;
-
-    for (; i < 500; i++)
-    {
-        visited.Add((cur, i));
         var blizzards = GetBlizzardLocns(i).ToList();
-        var moves = Neighbours(cur).Append(cur).Where(m => !blizzards.Contains(m) && !visited.Contains((m, i + 1))).ToList();
+        var moves = Neighbours(cur).Append(cur)
+            .Where(m => !blizzards.Contains(m) && !paths.ContainsKey((m, i))).ToList();
+        paths.Add((cur, i), moves);
 
-        if (moves.Count > 0)
+        if (moves.Count == 0)
         {
-            cur = moves.MinBy(m => fin.X - m.X + fin.Y - m.Y);
-            foreach (var point in moves)
+            foreach (var point in Neighbours(cur))
             {
-                if (point != cur)
-                    pending.Add((point, i + 1));
+                if (paths.TryGetValue((point, i - 1), out var neighbours))
+                {
+                    if (neighbours.Contains(cur))
+                        neighbours.Remove(cur);
+                }
             }
-
-            if (cur == fin)
-            {
-                if (i < result)
-                    result = i;
-                Console.WriteLine($"FROM {from} FINISH: {i}  BEST: {result}");
-                break;
-            }
+            PrintGrid(blizzards, cur);
+            var next = paths.Where(p => p.Value.Count > 0).MinBy(p => fin.X - p.Key.From.X + fin.Y - p.Key.From.Y);
+            cur = next.Value.MinBy(m => fin.X - m.X + fin.Y - m.Y);
+            i = next.Key.Turn;
+            continue;
         }
-        else
+
+
+        cur = moves.MinBy(m => fin.X - m.X + fin.Y - m.Y);
+        PrintGrid(blizzards, cur);
+        if (cur == fin)
         {
-            //Console.WriteLine($"{cur} @ {i}");
+            result = i;
+            Console.WriteLine(i);
             break;
         }
     }
-} while (pending.Count > 0);
+}
+
 IEnumerable<(int X, int Y)> Neighbours((int X, int Y) cur)
 {
     return new (int X, int Y)[] { cur, (cur.X - 1, cur.Y), (cur.X + 1, cur.Y), (cur.X, cur.Y - 1), (cur.X, cur.Y + 1) }
@@ -85,14 +80,13 @@ IEnumerable<(int X, int Y)> Neighbours((int X, int Y) cur)
 
 IEnumerable<(int X, int Y)> GetBlizzardLocns(int turn)
 {
-    var moveX = turn % blizMaxX;
-    var moveY = turn % blizMaxY;
+    var move = turn % blizMaxX;
     return startBlizzards.Select(b => b.Dir switch
     {
-        '>' => ((b.Point.X + moveX - 1) % blizMaxX + 1, b.Point.Y),
-        '<' => ((b.Point.X - moveX + blizMaxX - 1) % blizMaxX + 1, b.Point.Y),
-        'v' => (b.Point.X, (b.Point.Y + moveY - 1) % blizMaxY + 1),
-        '^' => (b.Point.X, (b.Point.Y - moveY + blizMaxY - 1) % blizMaxY + 1)
+        '>' => ((b.Point.X + move - 1) % blizMaxX + 1, b.Point.Y),
+        '<' => ((b.Point.X - move + blizMaxX - 1) % blizMaxX + 1, b.Point.Y),
+        'v' => (b.Point.X, (b.Point.Y + move - 1) % blizMaxY + 1),
+        '^' => (b.Point.X, (b.Point.Y - move + blizMaxY - 1) % blizMaxY + 1)
     });
 }
 
@@ -115,4 +109,5 @@ void PrintGrid(IEnumerable<(int X, int Y)> blizzards, (int X, int Y) cur)
         }
         Console.WriteLine(new string(line));
     }
+    Console.WriteLine();
 }
