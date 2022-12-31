@@ -58,41 +58,44 @@ var results = Deconstruct(Array.Empty<string>(), start).ToArray();
 var min = results.Min(r => r.Length);
 foreach (var item in results.Where(r => r.Length == min))
 {
-    Console.WriteLine(string.Join(", ", item.Reverse()));
+    Console.WriteLine(string.Join(",", item.Reverse()));
 }
+Console.WriteLine(min);
+
 
 IEnumerable<string[]> Deconstruct(IEnumerable<string> steps, string molecule)
 {
-    var cursteps = steps.ToArray();
-    if (bestSteps != null && cursteps.Length > bestSteps.Length)
-        yield break;
-
-    foreach (var r in repls.OrderByDescending(x => x[1].Length).AsParallel())
+    var final = repls.FirstOrDefault(r => r[0] == "e" && r[1] == molecule);
+    if (final != null)
     {
-        if (r[0] == "e")
+        var finalSteps = steps.Append($"{final[0]}=>{final[1]}").ToArray();
+        if (bestSteps == null || finalSteps.Length > bestSteps.Length)
         {
-            if (r[1] == molecule)
-            {
-                var resultSteps = cursteps.Append($"{r[0]} => {r[1]}").ToArray();
-                if (bestSteps == null || resultSteps.Length > bestSteps.Length)
-                {
-                    bestSteps = resultSteps;
-                    Console.WriteLine($"{resultSteps.Length} = {string.Join(",", resultSteps.Reverse())}");
-                }
-                yield return resultSteps;
-            }
+            bestSteps = finalSteps;
+            Console.WriteLine($"{finalSteps.Length} = {string.Join(",", finalSteps.Reverse())}");
+            yield return finalSteps;
         }
-        else
+    }
+    else
+    {
+        foreach (var results in repls.Where(r => molecule.Contains(r[1]))
+            .OrderByDescending(o => o[1].Length).SelectMany(r => DeconstructReplace(steps, molecule, r)))
         {
-            int i = 0;
-            while ((i = molecule.IndexOf(r[1], i)) >= 0)
-            {
-                foreach (var result in Deconstruct(cursteps.Append($"{r[0]}=>{r[1]}"), molecule[0..i] + r[0] + molecule[(i + r[1].Length)..]))
-                {
-                    yield return result;
-                }
-                i++;
-            }
+            yield return results;
         }
+    }
+}
+
+IEnumerable<string[]> DeconstructReplace(IEnumerable<string> steps, string molecule, string[] r)
+{
+    var nextStep = steps.Append($"{r[0]}=>{r[1]}");
+    int i = 0;
+    while ((i = molecule.IndexOf(r[1], i)) >= 0)
+    {
+        foreach (var result in Deconstruct(nextStep, molecule[0..i] + r[0] + molecule[(i + r[1].Length)..]))
+        {
+            yield return result;
+        }
+        i++;
     }
 }
