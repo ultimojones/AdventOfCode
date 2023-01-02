@@ -1,6 +1,7 @@
 ﻿using System.Security.Cryptography;
 
 // 344266178323 too high
+// 10439961859
 
 var pkgs = File.ReadAllLines("input.txt").Select(int.Parse).OrderDescending().ToArray();
 
