@@ -3,17 +3,9 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
-    <RootNamespace>Day22_1</RootNamespace>
+    <RootNamespace>Day22_2</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Program - Copy.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Program - Copy.cs" />
-  </ItemGroup>
 
 </Project>
