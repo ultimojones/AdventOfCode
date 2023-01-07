@@ -16,6 +16,10 @@ var start = new Dictionary<string, int>
 {
     { "CG", 1 },
     { "CM", 1 },
+    { "DG", 1 },
+    { "DM", 1 },
+    { "EG", 1 },
+    { "EM", 1 },
     { "OG", 1 },
     { "OM", 2 },
     { "PG", 1 },
@@ -59,8 +63,8 @@ void CheckActions()
         return;
     }
     if (currentActions.Count % 20 == 1 &&
-        ((layout.Values.Sum() - 12) / (double)currentActions.Count
-            < (28 / (double)(bestActions is null ? 200 : bestActions.Count))))
+        ((layout.Values.Sum() - 16) / (double)currentActions.Count
+            < (40 / (double)(bestActions is null ? 400 : bestActions.Count))))
     {
         return;
     }

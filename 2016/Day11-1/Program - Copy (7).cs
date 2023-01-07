@@ -29,8 +29,8 @@ var start = new Dictionary<string, int>
 var layout = new Dictionary<string, int>(start);
 
 List<(string Devices, int Floor)> bestActions = default!;
-var currentActions = new LinkedList<(string Devices, int Floor)>();
-var currentLayouts = new HashSet<string>();
+var currentActions = new Stack<(string Devices, int Floor)>();
+var currentLayouts = new Dictionary<string, int[]>();
 var checkedLayouts = new HashSet<(string, int)>();
 long testTotal = 0;
 long testInt = 0;
@@ -38,8 +38,6 @@ var timer = Stopwatch.StartNew();
 var timerInt = Stopwatch.StartNew();
 
 CheckActions();
-PrintActions(bestActions);
-Console.WriteLine($"({bestActions.Count}) {string.Join(", ", bestActions)}");
 
 void CheckActions()
 {
@@ -47,8 +45,8 @@ void CheckActions()
     {
         if (bestActions is null || currentActions.Count < bestActions.Count)
         {
-            bestActions = currentActions.ToList();
-            //PrintActions(bestActions);
+            bestActions = currentActions.Reverse().ToList();
+            PrintActions(bestActions);
             Console.WriteLine($"({bestActions.Count}) {string.Join(", ", bestActions)}");
             Console.WriteLine();
         }
@@ -58,37 +56,30 @@ void CheckActions()
     {
         return;
     }
-    if (currentActions.Count % 20 == 1 &&
-        ((layout.Values.Sum() - 12) / (double)currentActions.Count
-            < (28 / (double)(bestActions is null ? 200 : bestActions.Count))))
-    {
-        return;
-    }
+    //if (currentLayouts.Count >= 6 && currentLayouts.ElementAt(currentLayouts.Count - 6).Value.Average() > currentLayouts.Last().Value.Average())
+    //{
+    //    //PrintActions(currentActions);
+    //    //Console.WriteLine($"({currentActions.Count}) {string.Join(", ", currentActions)}");
+    //    //Console.WriteLine("**** REGRESSION ****");
+    //    return;
+    //}
 
-    var floor = int.Max(1, currentActions.LastOrDefault().Floor);
+    var floor = int.Max(1, currentActions.FirstOrDefault().Floor);
     var newActions = new Queue<(string Devices, int Floor)>();
     var localDevices = layout.Where(l => l.Value == floor).OrderBy(d => d.Key).Select(d => d.Key).ToArray();
-    var localGenerators = localDevices.Where(d => d[1] == 'G').ToArray();
-    var localMicrochips = localDevices.Where(d => d[1] == 'M').ToArray();
-
-    void EnqueueNew((string Devices, int Floor) action) { if (!newActions.Contains(action)) { newActions.Enqueue(action); } }
 
     if (floor < 4)
     {
-        foreach (var element in localDevices.GroupBy(d => d[0]).Where(e => e.Count() == 2))
+        for (int i = 0; i < localDevices.Length; i++)
         {
-            EnqueueNew(($"{element.Key}G+{element.Key}M", floor + 1));
-        }
-        for (int i = 0; i < localGenerators.Length; i++)
-        {
-            for (int j = i + 1; j < localGenerators.Length; j++)
+            for (int j = i + 1; j < localDevices.Length; j++)
             {
-                EnqueueNew((localGenerators[i] + "+" + localGenerators[j], floor + 1));
+                newActions.Enqueue((localDevices[i] + "+" + localDevices[j], floor + 1));
             }
         }
         for (int i = 0; i < localDevices.Length; i++)
         {
-            EnqueueNew((localDevices[i], floor + 1));
+            newActions.Enqueue((localDevices[i], floor + 1));
         }
     }
 
@@ -96,35 +87,13 @@ void CheckActions()
     {
         for (int i = 0; i < localDevices.Length; i++)
         {
-            EnqueueNew((localDevices[i], floor - 1));
+            newActions.Enqueue((localDevices[i], floor - 1));
         }
-        foreach (var element in localDevices.GroupBy(d => d[0]).Where(e => e.Count() == 2))
+        for (int i = 0; i < localDevices.Length; i++)
         {
-            EnqueueNew(($"{element.Key}G+{element.Key}M", floor - 1));
-        }
-        for (int i = 0; i < localGenerators.Length; i++)
-        {
-            for (int j = i + 1; j < localGenerators.Length; j++)
+            for (int j = i + 1; j < localDevices.Length; j++)
             {
-                EnqueueNew((localGenerators[i] + "+" + localGenerators[j], floor - 1));
-            }
-        }
-        for (int i = 0; i < localMicrochips.Length; i++)
-        {
-            for (int j = i + 1; j < localMicrochips.Length; j++)
-            {
-                EnqueueNew((localMicrochips[i] + "+" + localMicrochips[j], floor - 1));
-            }
-        }
-    }
-
-    if (floor < 4)
-    {
-        for (int i = 0; i < localMicrochips.Length; i++)
-        {
-            for (int j = i + 1; j < localMicrochips.Length; j++)
-            {
-                EnqueueNew((localMicrochips[i] + "+" + localMicrochips[j], floor + 1));
+                newActions.Enqueue((localDevices[i] + "+" + localDevices[j], floor - 1));
             }
         }
     }
@@ -132,7 +101,6 @@ void CheckActions()
     int valid = 0;
     while (newActions.TryDequeue(out var action))
     {
-        //if (currentActions.Count == 0) { Console.WriteLine(action); }
         testTotal++; testInt++;
         var devices = action.Devices.Split("+");
         foreach (var device in devices)
@@ -141,22 +109,28 @@ void CheckActions()
         }
         if (ValidateLayout())
         {
-            var layoutKey = action.Floor.ToString() + string.Concat(Enumerable.Range(0, layout.Count / 2)
+            var layoutKey = floor.ToString() + string.Concat(Enumerable.Range(0, layout.Count / 2)
                 .Select(i => string.Concat(layout.ElementAt(i * 2).Value, layout.ElementAt(i * 2 + 1).Value)).OrderDescending());
-            if (!currentLayouts.Contains(layoutKey) && !checkedLayouts.Contains((layoutKey, currentActions.Count + 1)))
+            if (!currentLayouts.ContainsKey(layoutKey) && !checkedLayouts.Contains((layoutKey, currentActions.Count + 1)))
             {
                 valid++;
-                currentActions.AddLast(action);
-                currentLayouts.Add(layoutKey);
-                checkedLayouts.Add((layoutKey, currentActions.Count));
+                currentActions.Push(action);
+                currentLayouts.Add(layoutKey, new[] { 0 });
+                checkedLayouts.Add((layoutKey, currentActions.Count + 1));
                 CheckActions();
-                currentActions.RemoveLast();
+                currentActions.Pop();
                 currentLayouts.Remove(layoutKey);
             }
         }
         foreach (var device in devices)
         {
             layout[device] = floor;
+        }
+        if (timerInt.ElapsedMilliseconds > 1000)
+        {
+            Console.WriteLine($"{testInt / 1D} tests/sec. Total tests: {testTotal} ElapsedTime: {timer.Elapsed}");
+            testInt = 0;
+            timerInt.Restart();
         }
     }
     if (valid == 0)
@@ -167,6 +141,7 @@ void CheckActions()
     bool ValidateLayout() =>
         layout.Where(l => l.Key[1] == 'M').All(m => layout[m.Key[0] + "G"] == m.Value || layout.Count(g => g.Key[1] == 'G' && g.Value == m.Value) == 0);
 }
+
 
 void PrintActions(IEnumerable<(string Devices, int Floor)> actions)
 {
