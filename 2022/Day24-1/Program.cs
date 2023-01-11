@@ -1,8 +1,4 @@
-﻿/*
- * That's not the right answer; your answer is too high. If you're stuck, make sure you're using the full input data; there are also some general tips on the about page, or you can ask for hints on the subreddit. Please wait one minute before trying again. (You guessed 304.) [Return to Day 24]
- */
-
-var border = new List<(int X, int Y)>();
+﻿var border = new List<(int X, int Y)>();
 var startBlizzards = new List<((int X, int Y) Point, char Dir)>();
 var lines = File.ReadAllLines("input.txt");
 for (int y = 0; y < lines.Length; y++)
