@@ -9,14 +9,14 @@ foreach (var line in File.ReadLines("input.txt"))
     nodes[names[1]].Add(names[0]);
 }
 
-var paths = FindPaths(new[] { "start" }).ToArray();
+var paths = FindPaths(new[] { "start" }, false).ToArray();
 foreach (var path in paths)
 {
     Console.WriteLine(string.Join(',', path));
 }
 Console.WriteLine(paths.Length);
 
-IEnumerable<string[]> FindPaths(IEnumerable<string> starting)
+IEnumerable<string[]> FindPaths(IEnumerable<string> starting, bool smallDone)
 {
     var path = starting.ToArray();
     var last = starting.Last();
@@ -26,10 +26,17 @@ IEnumerable<string[]> FindPaths(IEnumerable<string> starting)
         yield break;
     }
 
-    var smalls = path.Where(n => n.All(char.IsLower));
-    foreach (var node in nodes[last].Except(smalls))
+    foreach (var node in nodes[last].Except(new[] { "start" }))
     {
-        foreach (var next in FindPaths(path.Append(node)))
+        bool doingSmall = smallDone;
+
+        if (node.All(char.IsLower) && path.Contains(node))
+        {
+            if (smallDone) { continue; }
+            doingSmall = true;
+        }
+
+        foreach (var next in FindPaths(path.Append(node), doingSmall))
         {
             yield return next;
         }

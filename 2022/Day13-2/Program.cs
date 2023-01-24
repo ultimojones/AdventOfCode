@@ -1,72 +1,71 @@
-﻿var signals = File.ReadAllLines("input.txt").Where(l => l.Length > 0).ToList();
-signals.Add("[[2]]");
-signals.Add("[[6]]");
+﻿var mark = "[[2]]".AsSpan();
+var mark2 = ReadPacket(ref mark).ToArray();
+mark = "[[6]]".AsSpan();
+var mark6 = ReadPacket(ref mark).ToArray();
+var input = File.ReadLines("input.txt").Where(l => l.Length > 0)
+    .Select(l => { var s = l.AsSpan(); return ReadPacket(ref s).ToArray(); }).Append(mark2).Append(mark6).ToArray();
 
-var sorted = signals.OrderBy(s => new Segment(s, 0)).ToList();
+Array.Sort(input, new PacketComparer());
 
-var mark2 = sorted.IndexOf("[[2]]") + 1;
-var mark6 = sorted.IndexOf("[[6]]") + 1;
+input.Select(PrintArray).ToList().ForEach(Console.WriteLine);
+Console.WriteLine((Array.IndexOf(input, mark2) + 1) * (Array.IndexOf(input, mark6) + 1));
 
-Console.WriteLine(mark2 * mark6);
+string PrintArray(object[] arr) => '[' + string.Join(",", arr.Select(a => a is int v ? v.ToString() : PrintArray((object[])a))) + ']';
 
-class Segment : IComparable<Segment>
+IEnumerable<object> ReadPacket(ref ReadOnlySpan<char> s)
 {
-    public int? Integer { get; set; }
-    public List<Segment> List { get; set; } = new List<Segment>();
-    public int Start { get; set; }
-    public int Length { get; set; }
-
-    public Segment() { }
-
-    public Segment(string text, int start)
+    var pkt = Enumerable.Empty<object>();
+    int p = s[0] is '[' ? 1 : 0;
+    while (p < s.Length)
     {
-        Start = start;
-
-        if (char.IsDigit(text[start]))
+        switch (s[p])
         {
-            var value = new string(text.Skip(start).TakeWhile(char.IsDigit).ToArray());
-            Integer = int.Parse(value);
-            Length = value.Length;
-        }
-        else if (text[start] == '[')
-        {
-            Length = 1;
-            while (text[start + Length] != ']')
-            {
-                if (text[start + Length] == ',')
-                {
-                    Length++;
-                }
-                else
-                {
-                    var inner = new Segment(text, start + Length);
-                    List.Add(inner);
-                    Length += inner.Length;
-                }
-            }
-            Length++;
+            case '[':
+                s = s.Slice(p);
+                pkt = pkt.Append(ReadPacket(ref s));
+                p = 0;
+                break;
+            case >= '0' and <= '9':
+                var len = s[p..].IndexOfAny<char>(new[] { ',', ']' });
+                pkt = pkt.Append(int.Parse(s[p..(p + len)]));
+                p += len;
+                break;
+            case ']':
+                s = s.Slice(p + 1);
+                return pkt.ToArray();
+            default:
+                p++;
+                break;
         }
     }
+    return pkt.ToArray();
+}
 
-    public int CompareTo(Segment? other)
+class PacketComparer : System.Collections.IComparer
+{
+    public int Compare(object? a, object? b)
     {
-        if (other == null)
-            return 1;
+        var left = a as object[] ?? throw new ArgumentException("a");
+        var right = b as object[] ?? throw new ArgumentException("b");
 
-        if (Integer.HasValue && other.Integer.HasValue)
-            return Integer.Value - other.Integer.Value;
-
-        if (Integer.HasValue)
-            return new Segment { List = { this } }.CompareTo(other);
-
-        if (other.Integer.HasValue)
-            return CompareTo(new Segment { List = { other } });
-
-        for (int i = 0; i < Math.Min(List.Count, other.List.Count); i++)
+        for (int i = 0; i < int.Min(left.Length, right.Length); i++)
         {
-            var compare = List[i].CompareTo(other.List[i]);
-            if (compare != 0) return compare;
+            if (left[i] is int lVal && right[i] is int rVal)
+            {
+                if (lVal != rVal)
+                    return lVal - rVal;
+            }
+            else
+            {
+                var lArg = left[i] is object[] l ? l : new[] { left[i] };
+                var rArg = right[i] is object[] r ? r : new[] { right[i] };
+                var result = Compare(lArg, rArg);
+                if (result != 0)
+                    return result;
+            }
         }
-        return List.Count - other.List.Count;
+        if (left.Length == right.Length)
+            return 0;
+        return left.Length - right.Length;
     }
 }

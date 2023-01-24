@@ -1,77 +1,68 @@
-﻿var pairs = new List<(string left, string right)>();
-var correct = new List<int>();
-var input = File.ReadAllLines("input.txt");
-for (int i = 0; i < input.Length; i += 3)
+﻿var input = File.ReadAllLines("input.txt");
+var total = 0;
+for (int i = 1, l = 0; l < input.Length; i++, l += 3)
 {
-    pairs.Add((input[i], input[i + 1]));
-}
+    var lineLeft = input[l].AsSpan();
+    var lineRight = input[l + 1].AsSpan();
+    var left = ReadPacket(ref lineLeft).ToArray();
+    var right = ReadPacket(ref lineRight).ToArray();
 
-for (int i = 0; i < pairs.Count; i++)
-{
-    var left = new Segment(pairs[i].left, 0);
-    var right = new Segment(pairs[i].right, 0);
-
-    if (CompareSegments(left, right) < 0)
-        correct.Add(i + 1);
-}
-
-Console.WriteLine(correct.Sum());
-
-int CompareSegments(Segment left, Segment right)
-{
-    if (left.Integer.HasValue && right.Integer.HasValue)
-        return left.Integer.Value - right.Integer.Value;
-
-    if (left.Integer.HasValue)
-        return CompareSegments(new Segment { List = { left } }, right);
-
-    if (right.Integer.HasValue)
-        return CompareSegments(left, new Segment { List = { right } });
-
-    for (int i = 0; i < Math.Min(left.List.Count, right.List.Count); i++)
+    var ok = ComparePackets(left, right);
+    if (ok.GetValueOrDefault())
     {
-        var compare = CompareSegments(left.List[i], right.List[i]);
-        if (compare != 0) return compare;
+        total += i;
     }
-    return left.List.Count - right.List.Count;
 }
+Console.WriteLine(total);
 
-class Segment
+bool? ComparePackets(object[] left, object[] right)
 {
-    public int? Integer { get; set; }
-    public List<Segment> List { get; set; } = new List<Segment>();
-    public int Start { get; set; }
-    public int Length { get; set; }
-
-    public Segment() { }
-
-    public Segment(string text, int start)
+    for (int i = 0; i < int.Min(left.Length, right.Length); i++)
     {
-        Start = start;
-
-        if (char.IsDigit(text[start]))
+        if (left[i] is int lVal && right[i] is int rVal)
         {
-            var value = new string(text.Skip(start).TakeWhile(char.IsDigit).ToArray());
-            Integer = int.Parse(value);
-            Length = value.Length;
+            if (lVal != rVal)
+                return lVal < rVal;
         }
-        else if (text[start] == '[')
+        else
         {
-            Length = 1;
-            while (text[start + Length] != ']')
-            {
-                if (text[start + Length] == ',')
-                {
-                    Length++;
-                }
-                else
-                {
-                    var inner = new Segment(text, start + Length);
-                    List.Add(inner);
-                    Length += inner.Length;
-                }
-            }
-            Length++;
+            var lArg = left[i] is object[] l ? l : new[] { left[i] };
+            var rArg = right[i] is object[] r ? r : new[] { right[i] };
+            var result = ComparePackets(lArg, rArg);
+            if (result.HasValue)
+                return result;
         }
     }
+    if (left.Length == right.Length)
+        return null;
+    return left.Length < right.Length;
+}
+
+IEnumerable<object> ReadPacket(ref ReadOnlySpan<char> s)
+{
+    var pkt = Enumerable.Empty<object>();
+    int p = s[0] is '[' ? 1 : 0;
+    while (p < s.Length)
+    {
+        switch (s[p])
+        {
+            case '[':
+                s = s.Slice(p);
+                pkt = pkt.Append(ReadPacket(ref s));
+                p = 0;
+                break;
+            case >= '0' and <= '9':
+                var len = s[p..].IndexOfAny<char>(new[] { ',', ']' });
+                pkt = pkt.Append(int.Parse(s[p..(p + len)]));
+                p += len;
+                break;
+            case ']':
+                s = s.Slice(p + 1);
+                return pkt.ToArray();
+            default:
+                p++;
+                break;
+        }
+    }
+    return pkt.ToArray();
 }
