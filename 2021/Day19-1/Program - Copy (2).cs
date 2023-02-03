@@ -16,40 +16,43 @@ foreach (var line in File.ReadLines("sample.txt"))
     }
 }
 
-var sensorOffsets = new Dictionary<int, (int Direction, int Spin, Offset Offset)> { { 0, (0, 0, new Offset(0, 0, 0)) } };
-var foundBeacons = sensors[0].ToHashSet();
+var sensorOffsets = new Dictionary<int, (int Direction, int Spin, Offset Offset, int Beacons)>();
 
-while (sensorOffsets.Count < sensors.Count)
+for (int a = 0; a < sensors.Count - 1; a++)
 {
-    var aPairs = foundBeacons.SelectMany(a1 => foundBeacons.Where(a2 => a2 != a1).Select(a2 => (a1, a2)));
-    var sensorMatch = Enumerable.Range(0, sensors.Count).Except(sensorOffsets.Keys).Select(b =>
+    var sensorMatches = Enumerable.Range(1, sensors.Count - 1).Where(b => b != a).Select(b =>
     {
-        var bSen = sensors[b];
+        var bOffset = sensorOffsets.TryGetValue(b, out var offset) ? offset : default;
+        var aSen = sensors[a];
+        var bSen = sensors[b].Select(bs => bOffset.Offset is null ? bs : Rotate(bOffset.Direction, bOffset.Spin, bs) + bOffset.Offset).ToArray();
+        var aPairs = aSen.SelectMany(a1 => aSen.Where(a2 => a2 != a1).Select(a2 => (a1, a2)));
         var bPairs = bSen.SelectMany(b1 => bSen.Where(b2 => b2 != b1).Select(b2 => (b1, b2)));
-        var matches = aPairs.SelectMany(ap => bPairs
+        return aPairs.SelectMany(ap => bPairs
             .SelectMany(bp => GetRotations(bp.b1).Where(r => ap.a1 - r.Point == ap.a2 - Rotate(r.Direction, r.Spin, bp.b2))
-            .Select(r => (r.Direction, r.Spin, Offset: ap.a1 - Rotate(r.Direction, r.Spin, bp.b1))))).Distinct();
-        return matches
-            .Select(m => (b, m.Direction, m.Spin, m.Offset, Beacons: foundBeacons.Intersect(bSen.Select(bi => Rotate(m.Direction, m.Spin, bi) + m.Offset)).Count()))
-            .MaxBy(m => m.Beacons);
-    }).MaxBy(m => m.Beacons);
+            .Select(r => (r.Direction, r.Spin, Offset: ap.a1 - Rotate(r.Direction, r.Spin, bp.b1))))).Distinct()
+            .Select(m => (b, m.Direction, m.Spin, m.Offset, Beacons: aSen.Intersect(bSen.Select(bi => Rotate(m.Direction, m.Spin, bi) + m.Offset))))
+            .MaxBy(m => m.Beacons.Count());
+    });
 
-    Console.WriteLine(sensorMatch);
-    sensorOffsets[sensorMatch.b] = (sensorMatch.Direction, sensorMatch.Spin, sensorMatch.Offset);
-    foreach (var beacon in sensors[sensorMatch.b])
+    foreach (var match in sensorMatches)
     {
-        var found = Rotate(sensorMatch.Direction, sensorMatch.Spin, beacon) + sensorMatch.Offset;
-         if (!foundBeacons.Contains(found))
-            foundBeacons.Add(found);
+        if (match.Beacons.Count() > 4)
+        {
+            if (!sensorOffsets.TryGetValue(match.b, out var prev) || prev.Beacons < match.Beacons.Count())
+                sensorOffsets[match.b] = (match.Direction, match.Spin, match.Offset, match.Beacons.Count());
+        }
     }
- }
+    
+    //    .MaxBy(m => m.Beacons.Count());
+    
+    //Console.WriteLine($"{sensorMatches.b}{sensorMatches.Direction}{sensorMatches.Spin}{sensorMatches.Offset} {string.Concat(sensorMatches.Beacons)}");
+}
 
-Console.WriteLine(string.Concat(foundBeacons));
 foreach (var item in sensorOffsets)
 {
     Console.WriteLine(item);
+    Console.WriteLine(string.Concat(sensors[item.Key].Select(b => Rotate(item.Value.Direction, item.Value.Spin, b) + item.Value.Offset)));
 }
-Console.WriteLine(foundBeacons.Count);
 
 Offset Rotate(int direction, int spin, Offset point)
 {
