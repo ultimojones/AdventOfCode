@@ -1,54 +1,57 @@
 ﻿using System.Text.RegularExpressions;
 
-long cubes = 0;
-var onAreas = new List<Box>();
-var workingArea = new Box(-50, 50, -50, 50, -50, 50);
-
-foreach (var line in File.ReadLines("input.txt"))
+checked
 {
-    var r = Regex.Match(line, @"^(?<action>on|off) x=(?<x1>-?\d+)\.\.(?<x2>-?\d+),y=(?<y1>-?\d+)\.\.(?<y2>-?\d+),z=(?<z1>-?\d+)\.\.(?<z2>-?\d+)$");
-    var action = r.Groups["action"].Value;
-    var x1 = int.Parse(r.Groups["x1"].Value);
-    var x2 = int.Parse(r.Groups["x2"].Value);
-    var y1 = int.Parse(r.Groups["y1"].Value);
-    var y2 = int.Parse(r.Groups["y2"].Value);
-    var z1 = int.Parse(r.Groups["z1"].Value);
-    var z2 = int.Parse(r.Groups["z2"].Value);
-    var area = new Box(x1, x2, y1, y2, z1, z2);
-    if (!area.Intersects(workingArea, true)) continue;
-    Console.WriteLine(new { action, area, area.Size });
 
-    if (action == "on")
+    long cubes = 0;
+    var onAreas = new List<Box>();
+    var workingArea = new Box(-50, 50, -50, 50, -50, 50);
+
+    foreach (var line in File.ReadLines("input.txt"))
     {
-        var newAreas = new List<Box> { area };
-        foreach (var onArea in onAreas)
+        var r = Regex.Match(line, @"^(?<action>on|off) x=(?<x1>-?\d+)\.\.(?<x2>-?\d+),y=(?<y1>-?\d+)\.\.(?<y2>-?\d+),z=(?<z1>-?\d+)\.\.(?<z2>-?\d+)$");
+        var action = r.Groups["action"].Value;
+        var x1 = int.Parse(r.Groups["x1"].Value);
+        var x2 = int.Parse(r.Groups["x2"].Value);
+        var y1 = int.Parse(r.Groups["y1"].Value);
+        var y2 = int.Parse(r.Groups["y2"].Value);
+        var z1 = int.Parse(r.Groups["z1"].Value);
+        var z2 = int.Parse(r.Groups["z2"].Value);
+        var area = new Box(x1, x2, y1, y2, z1, z2);
+        Console.WriteLine(new { action, area, area.Size });
+
+        if (action == "on")
         {
-            var nextAreas = new List<Box>();
-            foreach (var newArea in newAreas)
+            var newAreas = new List<Box> { area };
+            foreach (var onArea in onAreas)
             {
-                nextAreas.AddRange(newArea.Except(onArea));
+                var nextAreas = new List<Box>();
+                foreach (var newArea in newAreas)
+                {
+                    nextAreas.AddRange(newArea.Except(onArea));
+                }
+                newAreas = nextAreas;
             }
-            newAreas = nextAreas;
+            onAreas.AddRange(newAreas);
+            cubes += newAreas.Sum(a => a.Size);
+            Console.WriteLine(new { cubes });
         }
-        onAreas.AddRange(newAreas);
-        cubes += newAreas.Sum(a => a.Size);
-        Console.WriteLine(new { cubes });
-    }
-    else
-    {
-        var deleteAreas = new List<Box>();
-        var newAreas = new List<Box>();
-        foreach (var onArea in onAreas.ToList())
+        else
         {
-            if (onArea.Intersect(area) is Box offArea)
-            { 
-                onAreas.Remove(onArea);
-                onAreas.AddRange(onArea.Except(area));
-                cubes -= offArea.Size;
+            var deleteAreas = new List<Box>();
+            var newAreas = new List<Box>();
+            foreach (var onArea in onAreas.ToList())
+            {
+                if (onArea.Intersect(area) is Box offArea)
+                {
+                    onAreas.Remove(onArea);
+                    onAreas.AddRange(onArea.Except(area));
+                    cubes -= offArea.Size;
+                }
             }
+            Console.WriteLine(new { cubes });
         }
-        Console.WriteLine(new { cubes });
-    }
+    } 
 }
 
 struct Box
@@ -59,7 +62,16 @@ struct Box
     public int Y2;
     public int Z1;
     public int Z2;
-    public long Size => (X2 - X1 + 1) * (Y2 - Y1 + 1) * (Z2 - Z1 + 1);
+    public long Size
+    {
+        get
+        {
+            checked
+            {
+                return (X2 - X1 + 1L) * (Y2 - Y1 + 1L) * (Z2 - Z1 + 1L); 
+            }
+        }
+    }
 
     public Box(int x1, int x2, int y1, int y2, int z1, int z2)
     {
@@ -160,24 +172,3 @@ struct Box
         return $"x={X1}..{X2},y={Y1}..{Y2},z={Z1}..{Z2}";
     }
 }
-
-//var a = new Box(1, 1, 1, 1, 1, 1);
-//var b = new Box(0, 2, 0, 2, 0, 2);
-//var ba = b.Except(a);
-//foreach (var item in ba)
-//{
-//    Console.WriteLine(item);
-//}
-//Console.WriteLine();
-
-//for (int i = 0; i < ba.Length - 1; i++)
-//{
-//    for (int j = i + 1; j < ba.Length; j++)
-//    {
-//        var inter = ba[i].Intersect(ba[j]);
-//        if (ba[i].Intersect(ba[j]) is Box c)
-//        {
-//            Console.WriteLine(c);
-//        }
-//    }
-//}
