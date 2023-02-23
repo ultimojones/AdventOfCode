@@ -16,17 +16,13 @@ for (int d = 13; d >= 0; d--)
 {
     foreach (var zout in states.Where(s => s.pos == d + 1).Select(s => s.zin).ToArray())
     {
-        for (long w = 9; w > 0; w--)
+        for (long w = 1; w < 10; w++)
         {
             var reverse = ReverseMonadDigit(d, w, zout).ToArray();
             foreach (var zin in reverse)
             {
-                //var ztest = ParseMonadDigit(d, w, zin);
-                //if (zout != ztest)
-                //    throw new Exception();
                 var state = (d, w, zin, zout);
                 states.Add(state);
-                //Console.WriteLine($"{state}");
             }
         }
     }
@@ -42,7 +38,7 @@ void ValidMonads(string digits, long zin, IEnumerable<(int pos, long digit, long
     if (digits.Length == 14)
     {
         var monadVal = long.Parse(digits);
-        if (bestMonadVal is null || monadVal > bestMonadVal)
+        if (bestMonadVal is null || monadVal < bestMonadVal)
         {
             bestDigits = digits;
             bestMonadVal = monadVal;
@@ -55,9 +51,9 @@ void ValidMonads(string digits, long zin, IEnumerable<(int pos, long digit, long
     }
     else
     {
-        if (bestDigits is null || digits.Length == 0 || long.Parse(digits) >= long.Parse(bestDigits[..digits.Length]))
+        if (bestDigits is null || digits.Length == 0 || long.Parse(digits) <= long.Parse(bestDigits[..digits.Length]))
         {
-            foreach (var monadState in states.Where(s => s.pos == digits.Length && s.zin == zin).OrderByDescending(s => s.digit))
+            foreach (var monadState in states.Where(s => s.pos == digits.Length && s.zin == zin).OrderBy(s => s.digit))
             {
                 ValidMonads(string.Concat(digits, monadState.digit), monadState.zout, monadStates.Append(monadState));
             }
