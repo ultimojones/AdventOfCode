@@ -49,6 +49,7 @@ void ValidMonads(string digits, long zin, IEnumerable<(int pos, long digit, long
             foreach (var item in monadStates)
             {
                 Console.WriteLine(item);
+                ParseMonadDigit(item.pos, item.digit, item.zin);
             }
             Console.WriteLine(digits);
         }
@@ -103,16 +104,16 @@ long ParseMonadDigit(int d, long w, long z)
     var parms = parameters![d];
     long x = 0, y = 0;
 
-    x = z % 26;
-    z /= parms.DivZ;
-    x += parms.AddX;
-    x = x == w ? 0 : 1;
-    y = 25 * x + 1;
-    z *= y;
-    y = w;
-    y += parms.AddY;
-    y *= x;
-    z += y;
+    Console.WriteLine($"inp w = {w}");
+    Console.WriteLine($"mul x 0; add x z; mod x 26 = {x = z % 26}");
+    Console.WriteLine($"div z {parms.DivZ} = {z /= parms.DivZ}");
+    Console.WriteLine($"add x {parms.AddX} = {x += parms.AddX}");
+    Console.WriteLine($"eql x w; eql x 0 = {x = (x == w ? 0 : 1)}");
+    if (x != 0)
+    {
+        Console.WriteLine($"mul y 0; add y 25; mul y x; add y 1; mul z y = {z *= (25 * x + 1)}");
+        Console.WriteLine($"mul y 0; add y w; add y {parms.AddY}; mul y x; add z y = {z += (w + parms.AddY) * x}");
+    }
 
     return z;
 }
